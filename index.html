@@ -217,7 +217,7 @@
 
         <div id="page2" class="page">
             <div class="page-nav">
-                <span class="title">🎲 专家抽取</span>
+                <span class="title">🎲 抽取系统</span>
                 <span class="back" onclick="goToPage1()">← 返回上传</span>
             </div>
             <div class="card">
@@ -249,7 +249,7 @@
             </div>
         </div>
 
-        <div class="footer">云咨空间 · 名单不上传服务器，所有处理仅在浏览器本地完成</div>
+        <div class="footer">名单不上传服务器，所有处理仅在浏览器本地完成</div>
     </div>
 
     <div id="toast" class="toast hidden"></div>
@@ -528,7 +528,7 @@
         }
 
         function showExportModal() {
-            if (!selected.length) { toast('请先抽取至少1位专家', 'error'); return; }
+            if (!selected.length) { toast('请先抽取至少1位', 'error'); return; }
             const top = document.getElementById('projectName').value.trim();
             document.getElementById('exportProjectName').value = top;
             document.getElementById('exportModal').classList.remove('hidden');
@@ -536,7 +536,7 @@
         function closeModal() { document.getElementById('exportModal').classList.add('hidden'); }
 
         function exportWord() {
-            const pn = document.getElementById('exportProjectName').value.trim() || '专家抽取报告';
+            const pn = document.getElementById('exportProjectName').value.trim() || '抽取报告';
             const dn = document.getElementById('drawerName').value.trim() || '(未填写)';
             const rm = document.getElementById('remark').value.trim();
             const now = new Date();
@@ -545,7 +545,7 @@
 
             let h = '<!DOCTYPE html><html><meta charset="utf-8"><title>'+pn+'</title>'+
                 '<style>body{font-family:"Microsoft YaHei",sans-serif;padding:40px;color:#333}h1{text-align:center;font-size:22px;margin-bottom:6px}.sub{text-align:center;color:#888;font-size:13px;margin-bottom:30px}table{width:100%;border-collapse:collapse;margin-top:16px}th,td{border:1px solid #ccc;padding:8px 12px;text-align:left;font-size:14px}th{background:#f5f5f5}.info td:first-child{width:100px;background:#f9f9f9;font-weight:600}.sig{margin-top:40px;display:flex;justify-content:space-between;font-size:14px}.ft{margin-top:30px;font-size:11px;color:#aaa;text-align:center;border-top:1px solid #eee;padding-top:16px}</style></head><body>'+
-                '<h1>'+pn+'</h1><div class="sub">专家抽取报告单 · '+ts+'</div>'+
+                '<h1>'+pn+'</h1><div class="sub">抽取报告单 · '+ts+'</div>'+
                 '<table class="info"><tr><td>项目名称</td><td>'+pn+'</td></tr>'+
                 '<tr><td>抽取时间</td><td>'+ts+'</td></tr>'+
                 '<tr><td>抽取人</td><td>'+dn+'</td></tr>'+
@@ -559,11 +559,11 @@
                 h += '<tr><td>'+(i+1)+'</td><td>'+e.name+'</td><td>'+(e.gender||'-')+'</td><td>'+(e.phone||'-')+'</td><td>'+(e.major||'-')+'</td></tr>';
             });
             h += '</tbody></table><div class="sig"><div>抽取人签字：_______________</div><div>监督人签字：_______________</div><div>日期：____年____月____日</div></div>'+
-                '<div class="ft">云咨空间·抽取系统 生成 | 纯浏览器处理，名单不上传服务器</div></body></html>';
+                '<div class="ft">  纯浏览器处理，名单不上传服务器</div></body></html>';
 
             const b = new Blob([h], {type:'application/msword;charset=utf-8'});
             const u = URL.createObjectURL(b), a = document.createElement('a');
-            a.href = u; a.download = pn+'_专家抽取报告.doc';
+            a.href = u; a.download = pn+'_抽取报告.doc';
             document.body.appendChild(a); a.click();
             document.body.removeChild(a); URL.revokeObjectURL(u);
             closeModal();
