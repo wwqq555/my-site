@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抽取系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #e8f0fe 0%, #f5f7fa 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+
+        header {
+            text-align: center;
+            padding: 28px 20px;
+            background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            border-radius: 16px;
+            color: #fff;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(26,115,232,0.3);
+        }
+        header h1 { font-size: 1.8rem; }
+        header p { font-size: 0.9rem; opacity: 0.85; margin-top: 4px; }
+
+        .project-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #fff;
+            padding: 12px 18px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .project-bar label { font-weight: 600; color: #444; white-space: nowrap; font-size: 0.95rem; }
+        .project-bar input {
+            flex: 1; padding: 8px 14px;
+            border: 2px solid #e0e0e0; border-radius: 8px; font-size: 0.95rem;
+        }
+        .project-bar input:focus { outline: none; border-color: #1a73e8; }
+
+        .btn {
+            padding: 10px 22px; border: none; border-radius: 8px; font-size: 0.95rem;
+            cursor: pointer; transition: all 0.25s; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-primary { background: #1a73e8; color: #fff; }
+        .btn-primary:hover { background: #1557b0; box-shadow: 0 2px 10px rgba(26,115,232,0.3); }
+        .btn-success { background: #34a853; color: #fff; }
+        .btn-success:hover { background: #2d9249; }
+        .btn-danger { background: #ea4335; color: #fff; }
+        .btn-danger:hover { background: #d33426; }
+        .btn-warning { background: #fbbc04; color: #333; }
+        .btn-outline { background: #fff; color: #333; border: 1px solid #ddd; }
+        .btn-outline:hover { background: #f5f5f5; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .file-btn { position: relative; overflow: hidden; display: inline-flex; }
+        .file-btn input[type=file] {
+            position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+            opacity: 0; cursor: pointer;
+        }
+
+        .card {
+            background: #fff; border-radius: 12px; padding: 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        .card-title { font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: #444; display: flex; align-items: center; gap: 8px; }
+
+        .page { display: none; }
+        .page.active { display: block; }
+
+        .upload-area {
+            text-align: center; padding: 60px 20px;
+        }
+        .upload-area .icon { font-size: 4rem; margin-bottom: 16px; }
+        .upload-area .tip { color: #888; margin-top: 12px; font-size: 0.9rem; }
+        .upload-area .btn { margin-top: 20px; padding: 14px 40px; font-size: 1.1rem; }
+        .upload-preview {
+            margin-top: 20px; text-align: left; display: none;
+        }
+        .upload-preview.show { display: block; }
+        .upload-preview table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .upload-preview th {
+            text-align: left; padding: 8px; border-bottom: 2px solid #eee;
+            font-weight: 600; color: #555;
+        }
+        .upload-preview td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; }
+        .upload-preview .count { font-size: 0.85rem; color: #888; margin-bottom: 10px; }
+
+        .draw-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+        }
+        @media (max-width: 700px) { .draw-grid { grid-template-columns: 1fr; } }
+
+        .draw-box { text-align: center; }
+        .draw-status {
+            font-size: 1.6rem; font-weight: 700; color: #1a73e8;
+            min-height: 70px; display: flex; align-items: center; justify-content: center;
+        }
+        .draw-status.idle { color: #bbb; font-size: 1.1rem; font-weight: 400; }
+        .draw-status.running { color: #ea4335; }
+        .draw-anim {
+            font-size: 2.4rem; font-weight: 700; color: #1a73e8;
+            min-height: 80px; display: flex; align-items: center; justify-content: center;
+            letter-spacing: 6px; transition: all 0.05s;
+        }
+        .draw-remain { font-size: 0.85rem; color: #888; margin: 8px 0 14px; }
+        .draw-count-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
+        .draw-count-row label { font-size: 0.95rem; color: #555; }
+        .draw-count-row input {
+            width: 80px; padding: 6px 10px; border: 2px solid #ddd;
+            border-radius: 6px; font-size: 1rem; text-align: center;
+        }
+        .draw-count-row input:focus { outline: none; border-color: #1a73e8; }
+        .draw-actions { display: flex; gap: 12px; justify-content: center; }
+
+        .result-table-wrap { max-height: 400px; overflow-y: auto; }
+        .result-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .result-table th { text-align: left; padding: 8px; border-bottom: 2px solid #eee; font-weight: 600; color: #555; }
+        .result-table td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; }
+        .result-table .picked { background: #f0f7ff; }
+        .tag-green { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.75rem; background: #e6f4ea; color: #34a853; }
+        .tag-blue { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.75rem; background: #e8f0fe; color: #1a73e8; }
+
+        .result-list { margin-top: 12px; }
+        .result-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; margin-bottom: 6px;
+            background: #f0f7ff; border-radius: 8px; border-left: 3px solid #1a73e8;
+        }
+        .result-item .idx {
+            width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+            background: #1a73e8; color: #fff; border-radius: 50%; font-size: 0.8rem; font-weight: 600; flex-shrink: 0;
+        }
+        .result-item .info { flex: 1; }
+        .result-item .name { font-weight: 600; }
+        .result-item .detail { font-size: 0.8rem; color: #888; }
+
+        .bottom-bar {
+            display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px;
+        }
+
+        .toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            padding: 12px 28px; border-radius: 8px; font-size: 0.95rem;
+            z-index: 9999; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            transition: opacity 0.3s; max-width: 90vw;
+        }
+        .toast-success { background: #34a853; color: #fff; }
+        .toast-error { background: #ea4335; color: #fff; }
+        .toast-info { background: #1a73e8; color: #fff; }
+        .toast.hidden { display: none; }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 10000;
+        }
+        .modal-overlay.hidden { display: none; }
+        .modal-box {
+            background: #fff; border-radius: 12px; padding: 28px;
+            width: 90%; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .modal-box h3 { margin-bottom: 12px; }
+        .modal-box label { display: block; margin-top: 12px; font-size: 0.9rem; color: #555; }
+        .modal-box input, .modal-box textarea {
+            width: 100%; padding: 10px; margin-top: 4px;
+            border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem;
+        }
+        .modal-box textarea { min-height: 60px; resize: vertical; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+        .footer { text-align: center; margin-top: 30px; font-size: 0.8rem; color: #aaa; }
+
+        .page-nav {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+        }
+        .page-nav .title { font-size: 1.1rem; font-weight: 600; color: #333; }
+        .page-nav .back { cursor: pointer; color: #1a73e8; font-size: 0.9rem; }
+        .page-nav .back:hover { text-decoration: underline; }
+
+        .empty-tip { text-align: center; padding: 30px; color: #999; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 抽取系统</h1>
+            <p>免费 · 纯前端处理 · 名单安全不外传</p>
+        </header>
+
+        <div class="project-bar">
+            <label>📌 项目名称：</label>
+            <input type="text" id="projectName" placeholder="输入项目名称，或上传名单自动识别">
+        </div>
+
+        <div id="page1" class="page active">
+            <div class="card">
+                <div class="card-title">📁 上传名单</div>
+                <div class="upload-area">
+                    <div class="icon">📂</div>
+                    <div class="file-btn">
+                        <button class="btn btn-primary">选择文件上传</button>
+                        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+                    </div>
+                    <div class="tip">支持 xlsx / xls / csv 格式</div>
+                    <div style="margin-top:10px;"><button class="btn btn-outline btn-sm" onclick="downloadTemplate()">下载模板</button></div>
+                </div>
+                <div class="upload-preview" id="uploadPreview">
+                    <div class="count" id="previewCount"></div>
+                    <div id="previewTable"></div>
+                    <div style="margin-top:16px;text-align:center;">
+                        <button class="btn btn-success" onclick="goToPage2()">进入抽取 →</button>
+                        <button class="btn btn-outline" onclick="resetUpload()" style="margin-left:8px;">重新上传</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="page2" class="page">
+            <div class="page-nav">
+                <span class="title">🎲 专家抽取</span>
+                <span class="back" onclick="goToPage1()">← 返回上传</span>
+            </div>
+            <div class="card">
+                <div class="card-title">📋 全部名单 <span style="font-weight:400;font-size:0.85rem;color:#888;" id="totalCountLabel"></span></div>
+                <div class="result-table-wrap" id="fullListWrap"></div>
+            </div>
+            <div class="draw-grid" style="margin-top:16px;">
+                <div class="card draw-box">
+                    <div class="card-title">⚡ 抽取</div>
+                    <div class="draw-anim" id="drawAnim" style="display:none;"></div>
+                    <div class="draw-status idle" id="drawStatus">准备就绪</div>
+                    <div class="draw-remain" id="drawRemain">剩余 0 人</div>
+                    <div class="draw-count-row">
+                        <label>抽取人数：</label>
+                        <input type="number" id="drawCount" value="1" min="1">
+                    </div>
+                    <div class="draw-actions">
+                        <button class="btn btn-success" id="startBtn" onclick="startDraw()" disabled>▶ 开始抽取</button>
+                        <button class="btn btn-danger" id="stopBtn" onclick="stopDraw()" disabled>⏹ 停止</button>
+                    </div>
+                    <div class="bottom-bar" style="justify-content:center;margin-top:16px;">
+                        <button class="btn btn-warning btn-sm" onclick="resetResult()">🔄 重置结果</button>
+                        <button class="btn btn-success btn-sm" id="exportBtn2" onclick="showExportModal()" disabled>📄 导出Word</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">🏆 抽取结果</div>
+                    <div class="result-list" id="resultList"><div class="empty-tip">暂无抽取结果</div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">云咨空间 · 名单不上传服务器，所有处理仅在浏览器本地完成</div>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+    <div id="exportModal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <h3>📄 导出抽取报告</h3>
+            <label>项目名称</label>
+            <input id="exportProjectName" placeholder="">
+            <label>抽取人</label>
+            <input id="drawerName" placeholder="例：张三">
+            <label>备注（选填）</label>
+            <textarea id="remark" placeholder="其他需要说明的内容..."></textarea>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModal()">取消</button>
+                <button class="btn btn-success" onclick="exportWord()">确认导出</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <script>
+        let experts = [];
+        let remaining = [];
+        let selected = [];
+        let isRunning = false;
+        let headers = [];
+
+        function toast(msg, type = 'info') {
+            const el = document.getElementById('toast');
+            el.textContent = msg; el.className = 'toast toast-' + type;
+            el.classList.remove('hidden');
+            clearTimeout(el._hide);
+            el._hide = setTimeout(() => el.classList.add('hidden'), 3000);
+        }
+
+        function parseCSV(text) {
+            const lines = text.split(/\r?\n/).filter(l => l.trim());
+            return lines.map(line => {
+                const vals = []; let cur = '', q = false;
+                for (let i = 0; i < line.length; i++) {
+                    const c = line[i];
+                    if (c === '"') { q = !q; continue; }
+                    if (c === ',' && !q) { vals.push(cur.trim()); cur = ''; continue; }
+                    cur += c;
+                }
+                vals.push(cur.trim());
+                return vals;
+            });
+        }
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (!['xlsx','xls','csv'].includes(ext)) { toast('请上传 xlsx 或 csv 文件', 'error'); this.value = ''; return; }
+
+            const pn = document.getElementById('projectName');
+            const base = file.name.replace(/\.(xlsx|xls|csv)$/i, '');
+            if (!pn.value.trim()) pn.value = base;
+
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                try {
+                    let rows;
+                    if (ext === 'csv') {
+                        rows = parseCSV(ev.target.result);
+                    } else {
+                        if (typeof XLSX === 'undefined') { toast('加载库失败，请刷新重试', 'error'); return; }
+                        const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+                        const ws = wb.Sheets[wb.SheetNames[0]];
+                        rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+                        const sn = wb.SheetNames[0];
+                        if (sn && !/^sheet/i.test(sn) && (!pn.value.trim() || pn.value === base)) pn.value = sn;
+                    }
+                    loadData(rows);
+                } catch(err) { toast('解析失败：' + err.message, 'error'); }
+            };
+            if (ext === 'csv') reader.readAsText(file);
+            else reader.readAsArrayBuffer(file);
+            this.value = '';
+        });
+
+        function loadData(rows) {
+            if (!rows || rows.length < 2) { toast('至少需要表头+1行数据', 'error'); return; }
+            let headerRow = -1;
+            for (let i = 0; i < rows.length; i++) {
+                const r = rows[i];
+                if (!r || !r.length) continue;
+                const vals = r.map(h => String(h).trim());
+                if (vals.some(h => h.includes('姓名') || h.includes('名字'))) {
+                    headerRow = i;
+                    headers = vals;
+                    break;
+                }
+            }
+            if (headerRow === -1) { toast('缺少"姓名"列', 'error'); return; }
+
+            function hdrIdx(pattern) { return headers.findIndex(h => pattern.test(h)); }
+            const ni = hdrIdx(/姓名|名字/);
+            const keys = ['name','gender','phone','category','major1','major2','major3','region','status'];
+            const pats = [/性别/, /手机|电话/, /类别/, /一级专业|一级/, /二级专业|二级/, /三级专业|三级/, /地区|地址/, /状态/];
+            const idxMap = [ni, ...pats.map(p => hdrIdx(p))];
+
+            const list = [];
+            for (let i = headerRow + 1; i < rows.length; i++) {
+                const row = rows[i]; if (!row || !row.length) continue;
+                const name = String(row[ni] || '').trim(); if (!name) continue;
+                const obj = { name };
+                for (let j = 0; j < keys.length; j++) {
+                    const idx = idxMap[j + 1];
+                    if (idx >= 0) obj[keys[j]] = String(row[idx] || '').trim();
+                }
+                list.push(obj);
+            }
+            if (list.length < 2) { toast('至少需要2名专家', 'error'); return; }
+
+            experts = list; remaining = [...list]; selected = [];
+            showPreview();
+            toast('已加载 ' + list.length + ' 名专家', 'success');
+        }
+
+        function fieldKey(header) {
+            const h = header.trim();
+            if (/姓名|名字/.test(h)) return 'name';
+            if (/性别/.test(h)) return 'gender';
+            if (/手机|电话/.test(h)) return 'phone';
+            if (/类别/.test(h)) return 'category';
+            if (/一级/.test(h) && /专业/.test(h)) return 'major1';
+            if (/二级/.test(h) && /专业/.test(h)) return 'major2';
+            if (/三级/.test(h) && /专业/.test(h)) return 'major3';
+            if (/地区|地址/.test(h)) return 'region';
+            if (/状态/.test(h)) return 'status';
+            return '';
+        }
+
+        function showPreview() {
+            const wrap = document.getElementById('uploadPreview');
+            wrap.classList.add('show');
+            document.getElementById('previewCount').textContent = '共 ' + experts.length + ' 人';
+            let html = '<table><thead><tr>';
+            headers.forEach(h => { html += '<th>' + h + '</th>'; });
+            html += '</tr></thead><tbody>';
+            experts.slice(0, 10).forEach((e, i) => {
+                html += '<tr><td>' + (i+1) + '</td>';
+                for (let j = 1; j < headers.length; j++) {
+                    const fk = fieldKey(headers[j]);
+                    html += '<td>' + (fk && e[fk] ? e[fk] : '') + '</td>';
+                }
+                html += '</tr>';
+            });
+            if (experts.length > 10) html += '<tr><td colspan="' + headers.length + '" style="text-align:center;color:#999;">...共 ' + experts.length + ' 人，仅展示前10人</td></tr>';
+            html += '</tbody></table>';
+            document.getElementById('previewTable').innerHTML = html;
+        }
+
+        function goToPage2() {
+            if (!experts.length) { toast('请先上传名单', 'error'); return; }
+            document.getElementById('page1').classList.remove('active');
+            document.getElementById('page2').classList.add('active');
+            renderFullList();
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('exportBtn2').disabled = true;
+            document.getElementById('drawRemain').textContent = '剩余 ' + remaining.length + ' 人';
+            document.getElementById('totalCountLabel').textContent = '(共 ' + experts.length + ' 人)';
+        }
+
+        function goToPage1() {
+            document.getElementById('page2').classList.remove('active');
+            document.getElementById('page1').classList.add('active');
+        }
+
+        function resetUpload() {
+            experts = []; remaining = []; selected = []; headers = [];
+            document.getElementById('uploadPreview').classList.remove('show');
+            document.getElementById('startBtn').disabled = true;
+        }
+
+        function renderFullList() {
+            const wrap = document.getElementById('fullListWrap');
+            if (!experts.length) { wrap.innerHTML = '<div class="empty-tip">暂无名单</div>'; return; }
+            let html = '<table class="result-table"><thead><tr>';
+            headers.forEach(h => { html += '<th>' + h + '</th>'; });
+            html += '<th>状态</th></tr></thead><tbody>';
+            experts.forEach((e, i) => {
+                const picked = selected.some(s => s.name === e.name && s.phone === e.phone);
+                html += '<tr class="' + (picked ? 'picked' : '') + '"><td>' + (i+1) + '</td>';
+                for (let j = 1; j < headers.length; j++) {
+                    const fk = fieldKey(headers[j]);
+                    html += '<td>' + (fk && e[fk] ? e[fk] : '') + '</td>';
+                }
+                html += '<td>' + (picked ? '<span class="tag-green">已抽取</span>' : '<span class="tag-blue">未抽取</span>') + '</td></tr>';
+            });
+            html += '</tbody></table>';
+            wrap.innerHTML = html;
+        }
+
+        function renderResult() {
+            const el = document.getElementById('resultList');
+            if (!selected.length) { el.innerHTML = '<div class="empty-tip">暂无抽取结果</div>'; return; }
+            el.innerHTML = selected.map((e, i) =>
+                '<div class="result-item"><div class="idx">' + (i+1) + '</div>' +
+                '<div class="info"><div class="name">' + e.name + '</div>' +
+                '<div class="detail">' +
+                [e.gender, e.category, e.major1, e.major2, e.major3, e.region, e.status]
+                    .filter(v => v).join(' · ') +
+                (e.phone ? ' · ' + e.phone : '') + '</div></div></div>'
+            ).join('');
+        }
+
+        function startDraw() {
+            if (!experts.length) { toast('请先上传名单', 'error'); return; }
+            if (!remaining.length) { toast('名单已抽空，请重置', 'error'); return; }
+            if (isRunning) return;
+
+            const n = parseInt(document.getElementById('drawCount').value) || 1;
+            const target = Math.min(n, remaining.length);
+            if (target < 1) return;
+
+            isRunning = true;
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('exportBtn2').disabled = true;
+            const st = document.getElementById('drawStatus');
+            const anim = document.getElementById('drawAnim');
+            st.style.display = 'none';
+            anim.style.display = 'flex';
+            anim.className = 'draw-anim';
+
+            const pick = [];
+            const pool = [...remaining];
+            let animCount = 0;
+            const totalLoops = 18 + Math.floor(Math.random() * 10);
+
+            const iv = setInterval(() => {
+                animCount++;
+                const idx = Math.floor(Math.random() * pool.length);
+                const person = experts[pool[idx]];
+                anim.textContent = person.name;
+                if (animCount >= totalLoops) {
+                    clearInterval(iv);
+                    finishDraw();
+                }
+            }, 60);
+
+            function finishDraw() {
+                for (let i = 0; i < target; i++) {
+                    if (!pool.length) break;
+                    const idx = Math.floor(Math.random() * pool.length);
+                    pick.push(pool.splice(idx, 1)[0]);
+                }
+                pick.forEach(p => {
+                    const ri = remaining.findIndex(r => r.name === p.name && r.phone === p.phone);
+                    if (ri >= 0) remaining.splice(ri, 1);
+                });
+                selected.push(...pick);
+
+                isRunning = false;
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('exportBtn2').disabled = false;
+                anim.style.display = 'none';
+                st.style.display = 'flex';
+                st.textContent = '✓ ' + pick.map(p => p.name).join('、');
+                st.className = 'draw-status idle';
+
+                document.getElementById('drawRemain').textContent = '剩余 ' + remaining.length + ' 人';
+                renderFullList();
+                renderResult();
+                toast('成功抽取 ' + pick.length + ' 人！', 'success');
+
+                if (!remaining.length) document.getElementById('startBtn').disabled = true;
+            }
+
+            window._stopDraw = function() {
+                clearInterval(iv);
+                finishDraw();
+            };
+        }
+
+        function stopDraw() {
+            if (!isRunning) return;
+            if (typeof window._stopDraw === 'function') {
+                window._stopDraw();
+            }
+        }
+
+        function resetResult() {
+            if (isRunning) return;
+            remaining = [...experts];
+            selected = [];
+            renderFullList();
+            renderResult();
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('exportBtn2').disabled = true;
+            document.getElementById('drawStatus').textContent = '准备就绪';
+            document.getElementById('drawStatus').className = 'draw-status idle';
+            document.getElementById('drawRemain').textContent = '剩余 ' + remaining.length + ' 人';
+            toast('已重置', 'info');
+        }
+
+        async function downloadTemplate() {
+            if (typeof ExcelJS === 'undefined') { toast('加载库失败，请刷新重试', 'error'); return; }
+            try {
+                const wb = new ExcelJS.Workbook();
+                const ws = wb.addWorksheet('名单模板');
+                ws.columns = [{width:6},{width:10},{width:6},{width:15},{width:8},{width:12},{width:12},{width:12},{width:10},{width:10}];
+                ws.mergeCells(1, 1, 2, 10);
+                const title = ws.getCell('A1');
+                title.value = '输入项目名称';
+                title.font = { size: 14, color: { argb: 'FF999999' } };
+                title.alignment = { horizontal: 'center', vertical: 'middle' };
+                ws.getRow(1).height = 24;
+                ws.getRow(2).height = 24;
+                const hdr = ['序号','姓名','性别','手机','类别','一级专业','二级专业','三级专业','地区','状态'];
+                const hr = ws.getRow(3);
+                hr.values = hdr;
+                hr.eachCell(c => { c.font = { bold: true }; c.alignment = { horizontal: 'center', vertical: 'middle' }; });
+                const samples = [
+                    [1,'张三','男','13800000001','工程类','建筑工程','结构工程','桥梁工程','北京','待抽取'],
+                    [2,'李四','女','13800000002','服务类','市政工程','给排水','污水处理','上海','待抽取'],
+                    [3,'王五','男','13800000003','货物类','建筑工程','暖通工程','空调系统','广州','待抽取']
+                ];
+                samples.forEach((row, i) => {
+                    const r = ws.getRow(i + 4);
+                    r.values = row;
+                    r.eachCell(c => { c.alignment = { vertical: 'middle' }; });
+                });
+                const buf = await wb.xlsx.writeBuffer();
+                const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+                const u = URL.createObjectURL(blob), a = document.createElement('a');
+                a.href = u; a.download = '名单模板.xlsx';
+                document.body.appendChild(a); a.click();
+                document.body.removeChild(a); setTimeout(() => URL.revokeObjectURL(u), 1000);
+                toast('模板已下载', 'success');
+            } catch(e) { toast('下载失败：'+e.message, 'error'); }
+        }
+
+        function showExportModal() {
+            if (!selected.length) { toast('请先抽取至少1位专家', 'error'); return; }
+            const top = document.getElementById('projectName').value.trim();
+            document.getElementById('exportProjectName').value = top;
+            document.getElementById('exportModal').classList.remove('hidden');
+        }
+        function closeModal() { document.getElementById('exportModal').classList.add('hidden'); }
+
+        async function exportWord() {
+            const pn = document.getElementById('exportProjectName').value.trim() || '抽取报告';
+            const dn = document.getElementById('drawerName').value.trim() || '(未填写)';
+            const now = new Date();
+            const ts = now.getFullYear()+'年'+(now.getMonth()+1)+'月'+now.getDate()+'日';
+
+            if (typeof ExcelJS === 'undefined') { toast('加载库失败，请刷新重试', 'error'); return; }
+            try {
+                const wb = new ExcelJS.Workbook();
+                const ws = wb.addWorksheet('抽取结果');
+                const colHeaders = headers.length ? headers : ['序号','姓名','性别','手机','类别','一级专业','二级专业','三级专业','地区','状态'];
+                const colCount = colHeaders.length;
+
+                ws.columns = Array.from({length: colCount}, (_, i) => ({width: i < 2 ? 16 : 12}));
+
+                ws.mergeCells(1, 1, 2, colCount);
+                const title = ws.getCell('A1');
+                title.value = pn + '抽取结果报告单';
+                title.font = { size: 16, bold: true };
+                title.alignment = { horizontal: 'center', vertical: 'middle' };
+                ws.getRow(1).height = 28;
+                ws.getRow(2).height = 28;
+
+                const hr = ws.getRow(3);
+                hr.values = colHeaders;
+                hr.eachCell(c => { c.font = { bold: true }; c.alignment = { horizontal: 'center', vertical: 'middle' }; });
+
+                selected.forEach((e, i) => {
+                    const r = ws.getRow(i + 4);
+                    const vals = [i + 1];
+                    for (let j = 1; j < colHeaders.length; j++) {
+                        const fk = fieldKey(colHeaders[j]);
+                        vals.push(fk && e[fk] ? e[fk] : '');
+                    }
+                    r.values = vals;
+                    r.eachCell(c => { c.alignment = { vertical: 'middle' }; });
+                });
+
+                const sigStart = selected.length + 5;
+                const rows = [
+                    ['抽取人签字：_______________'],
+                    ['监督人签字：_______________'],
+                    ['抽取时间：' + ts]
+                ];
+                for (let i = 0; i < 3; i++) {
+                    const r = ws.getRow(sigStart + i);
+                    r.getCell(1).value = rows[i][0];
+                    r.eachCell(c => { c.font = { size: 12 }; c.alignment = { vertical: 'middle' }; });
+                    r.height = 30;
+                }
+
+                const buf = await wb.xlsx.writeBuffer();
+                const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+                const u = URL.createObjectURL(blob), a = document.createElement('a');
+                a.href = u; a.download = pn+'_抽取结果.xlsx';
+                document.body.appendChild(a); a.click();
+                document.body.removeChild(a); setTimeout(() => URL.revokeObjectURL(u), 1000);
+                closeModal();
+                toast('报告已导出！', 'success');
+            } catch(e) { toast('导出失败：'+e.message, 'error'); }
+        }
+    </script>
+</body>
+</html>
