@@ -1,0 +1,1360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抽取系统</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #e8f0fe 0%, #f5f7fa 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: #333;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+
+        header {
+            text-align: center;
+            padding: 28px 20px;
+            background: linear-gradient(135deg, #1a73e8, #0d47a1);
+            border-radius: 16px;
+            color: #fff;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(26,115,232,0.3);
+        }
+        header h1 { font-size: 1.8rem; }
+        header p { font-size: 0.9rem; opacity: 0.85; margin-top: 4px; }
+
+        .project-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #fff;
+            padding: 12px 18px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+        .project-bar label { font-weight: 600; color: #444; white-space: nowrap; font-size: 0.95rem; }
+        .project-bar input {
+            flex: 1; padding: 8px 14px;
+            border: 2px solid #e0e0e0; border-radius: 8px; font-size: 0.95rem;
+        }
+        .project-bar input:focus { outline: none; border-color: #1a73e8; }
+
+        .btn {
+            padding: 10px 22px; border: none; border-radius: 8px; font-size: 0.95rem;
+            cursor: pointer; transition: all 0.25s; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-primary { background: #1a73e8; color: #fff; }
+        .btn-primary:hover { background: #1557b0; box-shadow: 0 2px 10px rgba(26,115,232,0.3); }
+        .btn-success { background: #34a853; color: #fff; }
+        .btn-success:hover { background: #2d9249; }
+        .btn-danger { background: #ea4335; color: #fff; }
+        .btn-danger:hover { background: #d33426; }
+        .btn-warning { background: #fbbc04; color: #333; }
+        .btn-outline { background: #fff; color: #333; border: 1px solid #ddd; }
+        .btn-outline:hover { background: #f5f5f5; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .file-btn { position: relative; overflow: hidden; display: inline-flex; }
+        .file-btn input[type=file] {
+            position: absolute; left: 0; top: 0; width: 100%; height: 100%;
+            opacity: 0; cursor: pointer;
+        }
+
+        .card {
+            background: #fff; border-radius: 12px; padding: 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+        }
+        .card-title { font-size: 1rem; font-weight: 600; margin-bottom: 16px; color: #444; display: flex; align-items: center; gap: 8px; }
+
+        .page { display: none; }
+        .page.active { display: block; }
+
+        .upload-area {
+            text-align: center; padding: 60px 20px;
+        }
+        .upload-area .icon { font-size: 4rem; margin-bottom: 16px; }
+        .upload-area .tip { color: #888; margin-top: 12px; font-size: 0.9rem; }
+        .upload-area .btn { margin-top: 20px; padding: 14px 40px; font-size: 1.1rem; }
+        .upload-preview {
+            margin-top: 20px; text-align: left; display: none;
+        }
+        .upload-preview.show { display: block; }
+        .upload-preview table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .upload-preview th {
+            text-align: left; padding: 8px; border-bottom: 2px solid #eee;
+            font-weight: 600; color: #555;
+        }
+        .upload-preview td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; }
+        .upload-preview .count { font-size: 0.85rem; color: #888; margin-bottom: 10px; }
+
+        .draw-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+        }
+        @media (max-width: 700px) { .draw-grid { grid-template-columns: 1fr; } }
+
+        .draw-box { text-align: center; }
+        .draw-status {
+            font-size: 1.6rem; font-weight: 700; color: #1a73e8;
+            min-height: 70px; display: flex; align-items: center; justify-content: center;
+        }
+        .draw-status.idle { color: #bbb; font-size: 1.1rem; font-weight: 400; }
+        .draw-status.running { color: #ea4335; }
+        .draw-anim {
+            font-size: 2.4rem; font-weight: 700; color: #1a73e8;
+            min-height: 80px; display: flex; align-items: center; justify-content: center;
+            letter-spacing: 6px; transition: all 0.05s;
+        }
+        .draw-remain { font-size: 0.85rem; color: #888; margin: 8px 0 14px; }
+        .draw-count-row { display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 16px; }
+        .draw-count-row label { font-size: 0.95rem; color: #555; }
+        .draw-count-row input {
+            width: 80px; padding: 6px 10px; border: 2px solid #ddd;
+            border-radius: 6px; font-size: 1rem; text-align: center;
+        }
+        .draw-count-row input:focus { outline: none; border-color: #1a73e8; }
+        .draw-actions { display: flex; gap: 12px; justify-content: center; }
+
+        .filter-bar {
+            display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .result-table-wrap { max-height: 400px; overflow-y: auto; }
+        .result-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .result-table th { text-align: left; padding: 8px; border-bottom: 2px solid #eee; font-weight: 600; color: #555; }
+        .result-table td { padding: 6px 8px; border-bottom: 1px solid #f0f0f0; }
+        .result-table .picked { background: #f0f7ff; }
+        .tag-green { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.75rem; background: #e6f4ea; color: #34a853; }
+        .tag-blue { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 0.75rem; background: #e8f0fe; color: #1a73e8; }
+
+        .result-list { margin-top: 12px; }
+        .result-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 14px; margin-bottom: 6px;
+            background: #f0f7ff; border-radius: 8px; border-left: 3px solid #1a73e8;
+        }
+        .result-item .idx {
+            width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+            background: #1a73e8; color: #fff; border-radius: 50%; font-size: 0.8rem; font-weight: 600; flex-shrink: 0;
+        }
+        .result-item .info { flex: 1; }
+        .result-item .name { font-weight: 600; }
+        .result-item .detail { font-size: 0.8rem; color: #888; }
+
+        .bottom-bar {
+            display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px;
+        }
+
+        .toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            padding: 12px 28px; border-radius: 8px; font-size: 0.95rem;
+            z-index: 9999; box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            transition: opacity 0.3s; max-width: 90vw;
+        }
+        .toast-success { background: #34a853; color: #fff; }
+        .toast-error { background: #ea4335; color: #fff; }
+        .toast-info { background: #1a73e8; color: #fff; }
+        .toast.hidden { display: none; }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 10000;
+        }
+        .modal-overlay.hidden { display: none; }
+        .modal-box {
+            background: #fff; border-radius: 12px; padding: 28px;
+            width: 90%; max-width: 400px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .modal-box h3 { margin-bottom: 12px; }
+        .modal-box label { display: block; margin-top: 12px; font-size: 0.9rem; color: #555; }
+        .modal-box input, .modal-box textarea {
+            width: 100%; padding: 10px; margin-top: 4px;
+            border: 1px solid #ddd; border-radius: 6px; font-size: 0.95rem;
+        }
+        .modal-box textarea { min-height: 60px; resize: vertical; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+
+        .footer { text-align: center; margin-top: 30px; font-size: 0.8rem; color: #aaa; }
+
+        .page-nav {
+            display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;
+        }
+        .page-nav .title { font-size: 1.1rem; font-weight: 600; color: #333; }
+        .page-nav .back { cursor: pointer; color: #1a73e8; font-size: 0.9rem; }
+        .page-nav .back:hover { text-decoration: underline; }
+
+        .empty-tip { text-align: center; padding: 30px; color: #999; }
+
+        .cat-filter { position: relative; }
+        .cat-trigger {
+            display: inline-block; padding: 5px 14px; font-size: 0.85rem; color: #555;
+            border: 1px solid #ddd; border-radius: 16px; cursor: pointer; background: #fff;
+            transition: all 0.2s; user-select: none;
+        }
+        .cat-trigger:hover { border-color: #1a73e8; color: #1a73e8; }
+        .cat-trigger.has { border-color: #1a73e8; color: #1a73e8; background: #e8f0fe; }
+        .cat-dropdown {
+            display: none; position: fixed; z-index: 100;
+            background: #fff; border: 1px solid #e0e0e0; border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12); padding: 8px; overflow-y: auto;
+            width: 340px; max-width: 90vw; min-width: 260px;
+        }
+        .cat-dropdown.show { display: block; }
+        
+        .cat-opt {
+            display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+            cursor: pointer; border-radius: 6px; font-size: 0.85rem; user-select: none;
+        }
+        .cat-opt:hover { background: #f5f5f5; }
+        .cat-opt .cb {
+            width: 18px; height: 18px; border: 1.5px solid #bbb; border-radius: 3px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            transition: all 0.15s; font-size: 12px; color: #fff;
+        }
+        .cat-opt.on .cb { background: #1a73e8; border-color: #1a73e8; }
+        .cat-opt .cname { flex: 1; color: #333; font-weight: 500; }
+        .cat-opt .cnum { color: #888; font-size: 0.75rem; }
+        
+        .cat-expand {
+            width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
+            font-size: 14px; color: #999; cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .cat-expand.expanded { transform: rotate(90deg); }
+        
+        .cat-divider { height: 1px; background: #eee; margin: 6px 0; }
+        .cat-group-label {
+            padding: 4px 10px; font-size: 0.75rem; color: #666; font-weight: 500;
+            background: #f8f9fa; margin: 4px -8px;
+        }
+        
+        .cat-nested {
+            display: none;
+            margin-left: 20px;
+            padding-left: 10px;
+            border-left: 1px solid #e8e8e8;
+        }
+        .cat-nested.show {
+            display: block;
+        }
+        .level-group { margin: 4px 0; }
+        .level-group-header {
+            display: flex; align-items: center; gap: 6px; padding: 5px 10px;
+            cursor: pointer; border-radius: 5px; font-size: 0.82rem; user-select: none;
+        }
+        .level-group-header:hover { background: #f5f5f5; }
+        .level-expand {
+            width: 16px; height: 16px; display: flex; align-items: center; justify-content: center;
+            font-size: 12px; color: #999; transition: transform 0.2s; flex-shrink: 0;
+        }
+        .level-expand.expanded { transform: rotate(90deg); }
+        .level-label { flex: 1; color: #555; font-weight: 500; }
+        .level-count { color: #999; font-size: 0.75rem; }
+        .level-items { display: none; margin-left: 16px; }
+        .level-items.show { display: block; }
+        
+        .major1-opt {
+            display: flex; align-items: center; gap: 6px; padding: 5px 10px;
+            cursor: pointer; border-radius: 5px; font-size: 0.82rem; user-select: none;
+        }
+        .major1-opt:hover { background: #f5f5f5; }
+        .major1-opt .cb {
+            width: 16px; height: 16px; border: 1.5px solid #bbb; border-radius: 3px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            transition: all 0.15s; font-size: 11px; color: #fff;
+        }
+        .major1-opt.on .cb { background: #667eea; border-color: #667eea; }
+        .major1-opt .cname { flex: 1; color: #444; }
+        .major1-opt .cnum { color: #999; font-size: 0.7rem; }
+        
+        .major2-opt {
+            display: flex; align-items: center; gap: 6px; padding: 4px 10px;
+            cursor: pointer; border-radius: 4px; font-size: 0.8rem; user-select: none;
+            margin-left: 12px;
+        }
+        .major2-opt:hover { background: #f5f5f5; }
+        .major2-opt .cb {
+            width: 15px; height: 15px; border: 1.5px solid #bbb; border-radius: 3px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            transition: all 0.15s; font-size: 10px; color: #fff;
+        }
+        .major2-opt.on .cb { background: #7c4dff; border-color: #7c4dff; }
+        .major2-opt .cname { flex: 1; color: #555; }
+        .major2-opt .cnum { color: #999; font-size: 0.65rem; }
+        
+        .major3-opt {
+            display: flex; align-items: center; gap: 6px; padding: 3px 10px;
+            cursor: pointer; border-radius: 3px; font-size: 0.78rem; user-select: none;
+            margin-left: 24px;
+        }
+        .major3-opt:hover { background: #f5f5f5; }
+        .major3-opt .cb {
+            width: 14px; height: 14px; border: 1.5px solid #bbb; border-radius: 3px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            transition: all 0.15s; font-size: 9px; color: #fff;
+        }
+        .major3-opt.on .cb { background: #9c27b0; border-color: #9c27b0; }
+        .major3-opt .cname { flex: 1; color: #666; }
+        .major3-opt .cnum { color: #999; font-size: 0.6rem; }
+
+        .region-filter { position: relative; }
+        .region-trigger {
+            display: inline-block; padding: 5px 14px; font-size: 0.85rem; color: #555;
+            border: 1px solid #ddd; border-radius: 16px; cursor: pointer; background: #fff;
+            transition: all 0.2s; user-select: none;
+        }
+        .region-trigger:hover { border-color: #34a853; color: #34a853; }
+        .region-trigger.has { border-color: #34a853; color: #34a853; background: #e6f4ea; }
+        .region-dropdown {
+            display: none; position: fixed; z-index: 100;
+            background: #fff; border: 1px solid #e0e0e0; border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12); padding: 8px; overflow-y: auto;
+            width: 280px; max-width: 90vw;
+        }
+        .region-dropdown.show { display: block; }
+        .region-opt {
+            display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+            cursor: pointer; border-radius: 6px; font-size: 0.85rem; user-select: none;
+        }
+        .region-opt:hover { background: #f5f5f5; }
+        .region-opt .cb {
+            width: 18px; height: 18px; border: 1.5px solid #bbb; border-radius: 3px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            transition: all 0.15s; font-size: 12px; color: #fff;
+        }
+        .region-opt.on .cb { background: #34a853; border-color: #34a853; }
+        .region-opt .cname { flex: 1; color: #333; }
+        .region-opt .cnum { color: #888; font-size: 0.75rem; }
+        .region-divider { height: 1px; background: #eee; margin: 6px 0; }
+
+        .major-filter { position: relative; }
+        .major-trigger {
+            display: inline-block; padding: 5px 14px; font-size: 0.85rem; color: #555;
+            border: 1px solid #ddd; border-radius: 16px; cursor: pointer; background: #fff;
+            transition: all 0.2s; user-select: none;
+        }
+        .major-trigger:hover { border-color: #fbbc04; color: #fbbc04; }
+        .major-trigger.has { border-color: #fbbc04; color: #fbbc04; background: #fff8e1; }
+        .major-dropdown {
+            display: none; position: absolute; top: 32px; left: 0; right: 0;
+            background: #fff; border: 1px solid #e0e0e0; border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12); z-index: 100; padding: 8px; max-height: 350px; overflow-y: auto;
+            min-width: 220px;
+        }
+        .major-dropdown.show { display: block; }
+        .major-opt {
+            display: flex; align-items: center; gap: 8px; padding: 5px 10px;
+            cursor: pointer; border-radius: 6px; font-size: 0.82rem; user-select: none;
+        }
+        .major-opt:hover { background: #f5f5f5; }
+        .major-opt .cb {
+            width: 16px; height: 16px; border: 1.5px solid #bbb; border-radius: 3px;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            transition: all 0.15s; font-size: 11px; color: #fff;
+        }
+        .major-opt.on .cb { background: #fbbc04; border-color: #fbbc04; }
+        .major-opt .cname { flex: 1; color: #333; }
+        .major-opt .cnum { color: #888; font-size: 0.7rem; }
+        .major-divider { height: 1px; background: #eee; margin: 4px 0; }
+        .major-group-label {
+            padding: 3px 8px; font-size: 0.7rem; color: #666; font-weight: 500;
+            background: #f8f9fa; margin: 3px -8px;
+        }
+        .major-group { margin-left: 12px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎯 抽取系统</h1>
+            <p>免费 · 纯前端处理 · 名单安全不外传</p>
+        </header>
+
+        <div class="project-bar">
+            <label>📌 项目名称：</label>
+            <input type="text" id="projectName" placeholder="输入项目名称，或上传名单自动识别">
+        </div>
+
+        <div id="page1" class="page active">
+            <div class="card">
+                <div class="card-title">📁 上传名单</div>
+                <div class="upload-area">
+                    <div class="icon">📂</div>
+                    <div class="file-btn">
+                        <button class="btn btn-primary">选择文件上传</button>
+                        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+                    </div>
+                    <div class="tip">支持 xlsx / xls / csv 格式</div>
+                    <div style="margin-top:10px;"><button class="btn btn-outline btn-sm" onclick="downloadTemplate()">下载模板</button></div>
+                </div>
+                <div class="upload-preview" id="uploadPreview">
+                    <div class="count" id="previewCount"></div>
+                    <div id="previewTable"></div>
+                    <div style="margin-top:16px;text-align:center;">
+                        <button class="btn btn-success" onclick="goToPage2()">进入抽取 →</button>
+                        <button class="btn btn-outline" onclick="resetUpload()" style="margin-left:8px;">重新上传</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="page2" class="page">
+            <div class="page-nav">
+                <span class="title">🎲 专家抽取</span>
+                <span class="back" onclick="goToPage1()">← 返回上传</span>
+            </div>
+            <div class="card">
+                <div class="card-title">📋 全部名单 <span style="font-weight:400;font-size:0.85rem;color:#888;" id="totalCountLabel"></span></div>
+                <div class="result-table-wrap" id="fullListWrap"></div>
+            </div>
+            <div class="draw-grid" style="margin-top:16px;">
+                <div class="card draw-box">
+                    <div class="card-title">⚡ 抽取</div>
+                    <div class="draw-anim" id="drawAnim" style="display:none;"></div>
+                    <div class="draw-status idle" id="drawStatus">准备就绪</div>
+                    <div class="draw-remain" id="drawRemain">剩余 0 人</div>
+                    <div class="draw-count-row">
+                        <label>抽取人数：</label>
+                        <input type="number" id="drawCount" value="1" min="1">
+                    </div>
+                    <div class="filter-bar" id="filterBar">
+                        <div class="cat-filter">
+                            <span class="cat-trigger" id="catTrigger" onclick="toggleCatDropdown()">📂 类别筛选</span>
+                            <div class="cat-dropdown" id="catDropdown"></div>
+                        </div>
+                        <div class="region-filter">
+                            <span class="region-trigger" id="regionTrigger" onclick="toggleRegionDropdown()">📍 地区筛选</span>
+                            <div class="region-dropdown" id="regionDropdown"></div>
+                        </div>
+                    </div>
+                    <div class="draw-actions">
+                        <button class="btn btn-success" id="startBtn" onclick="startDraw()" disabled>▶ 开始抽取</button>
+                        <button class="btn btn-danger" id="stopBtn" onclick="stopDraw()" disabled>⏹ 停止</button>
+                    </div>
+                    <div class="bottom-bar" style="justify-content:center;margin-top:16px;">
+                        <button class="btn btn-warning btn-sm" onclick="resetResult()">🔄 重置结果</button>
+                        <button class="btn btn-success btn-sm" id="exportBtn2" onclick="showExportModal()" disabled>📄 导出Word</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-title">🏆 抽取结果</div>
+                    <div class="result-list" id="resultList"><div class="empty-tip">暂无抽取结果</div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="footer">云咨空间 · 名单不上传服务器，所有处理仅在浏览器本地完成</div>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+    <div id="exportModal" class="modal-overlay hidden">
+        <div class="modal-box">
+            <h3>📄 导出抽取报告</h3>
+            <label>项目名称</label>
+            <input id="exportProjectName" placeholder="">
+            <label>抽取人</label>
+            <input id="drawerName" placeholder="例：张三">
+            <label>备注（选填）</label>
+            <textarea id="remark" placeholder="其他需要说明的内容..."></textarea>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModal()">取消</button>
+                <button class="btn btn-success" onclick="exportWord()">确认导出</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+    <script>
+        let experts = [];
+        let remaining = [];
+        let selected = [];
+        let isRunning = false;
+        let headers = [];
+        let selectedCategories = [];
+        let selectedRegions = [];
+        let selectedMajor1 = [];
+        let selectedMajor2 = [];
+        let selectedMajor3 = [];
+
+        function toast(msg, type = 'info') {
+            const el = document.getElementById('toast');
+            el.textContent = msg; el.className = 'toast toast-' + type;
+            el.classList.remove('hidden');
+            clearTimeout(el._hide);
+            el._hide = setTimeout(() => el.classList.add('hidden'), 3000);
+        }
+
+        function parseCSV(text) {
+            const lines = text.split(/\r?\n/).filter(l => l.trim());
+            return lines.map(line => {
+                const vals = []; let cur = '', q = false;
+                for (let i = 0; i < line.length; i++) {
+                    const c = line[i];
+                    if (c === '"') { q = !q; continue; }
+                    if (c === ',' && !q) { vals.push(cur.trim()); cur = ''; continue; }
+                    cur += c;
+                }
+                vals.push(cur.trim());
+                return vals;
+            });
+        }
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const ext = file.name.split('.').pop().toLowerCase();
+            if (!['xlsx','xls','csv'].includes(ext)) { toast('请上传 xlsx 或 csv 文件', 'error'); this.value = ''; return; }
+
+            const pn = document.getElementById('projectName');
+            const base = file.name.replace(/\.(xlsx|xls|csv)$/i, '');
+            if (!pn.value.trim()) pn.value = base;
+
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                try {
+                    let rows;
+                    if (ext === 'csv') {
+                        rows = parseCSV(ev.target.result);
+                    } else {
+                        if (typeof XLSX === 'undefined') { toast('加载库失败，请刷新重试', 'error'); return; }
+                        const wb = XLSX.read(new Uint8Array(ev.target.result), { type: 'array' });
+                        const ws = wb.Sheets[wb.SheetNames[0]];
+                        rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+                        const sn = wb.SheetNames[0];
+                        if (sn && !/^sheet/i.test(sn) && (!pn.value.trim() || pn.value === base)) pn.value = sn;
+                    }
+                    loadData(rows);
+                } catch(err) { toast('解析失败：' + err.message, 'error'); }
+            };
+            if (ext === 'csv') reader.readAsText(file);
+            else reader.readAsArrayBuffer(file);
+            this.value = '';
+        });
+
+        function loadData(rows) {
+            if (!rows || rows.length < 2) { toast('至少需要表头+1行数据', 'error'); return; }
+            let headerRow = -1;
+            for (let i = 0; i < rows.length; i++) {
+                const r = rows[i];
+                if (!r || !r.length) continue;
+                const vals = r.map(h => String(h).trim());
+                if (vals.some(h => h.includes('姓名') || h.includes('名字'))) {
+                    headerRow = i;
+                    headers = vals;
+                    break;
+                }
+            }
+            if (headerRow === -1) { toast('缺少"姓名"列', 'error'); return; }
+
+            function hdrIdx(pattern) { return headers.findIndex(h => pattern.test(h)); }
+            const ni = hdrIdx(/姓名|名字/);
+            const keys = ['name','gender','phone','category','major1','major2','major3','region','status'];
+            const pats = [/性别/, /手机|电话/, /类别/, /一级专业|一级/, /二级专业|二级/, /三级专业|三级/, /地区|地址/, /状态/];
+            const idxMap = [ni, ...pats.map(p => hdrIdx(p))];
+
+            const catIdx = keys.indexOf('category');
+            const list = [];
+            let lastCat = '';
+            for (let i = headerRow + 1; i < rows.length; i++) {
+                const row = rows[i]; if (!row || !row.length) continue;
+                const name = String(row[ni] || '').trim(); if (!name) continue;
+                const obj = { name };
+                for (let j = 1; j < keys.length; j++) {
+                    const idx = idxMap[j];
+                    if (idx >= 0) {
+                        let v = String(row[idx] || '').trim();
+                        if (j === catIdx && !v) v = lastCat;
+                        else if (j === catIdx && v) lastCat = v;
+                        obj[keys[j]] = v;
+                    }
+                }
+                list.push(obj);
+            }
+            if (list.length < 2) { toast('至少需要2名专家', 'error'); return; }
+
+            experts = list; remaining = [...list]; selected = [];
+            showPreview();
+            toast('已加载 ' + list.length + ' 名专家', 'success');
+        }
+
+        function fieldKey(header) {
+            const h = header.trim();
+            if (/姓名|名字/.test(h)) return 'name';
+            if (/性别/.test(h)) return 'gender';
+            if (/手机|电话/.test(h)) return 'phone';
+            if (/类别/.test(h)) return 'category';
+            if (/一级/.test(h) && /专业/.test(h)) return 'major1';
+            if (/二级/.test(h) && /专业/.test(h)) return 'major2';
+            if (/三级/.test(h) && /专业/.test(h)) return 'major3';
+            if (/地区|地址/.test(h)) return 'region';
+            if (/状态/.test(h)) return 'status';
+            return '';
+        }
+
+        function getCategories() {
+            return [...new Set(remaining.map(e => e.category).filter(c => c))];
+        }
+
+        function getRegions() {
+            return [...new Set(remaining.map(e => e.region).filter(r => r))];
+        }
+
+        function getMajor1sByCat(cat) {
+            let pool = remaining;
+            if (cat) pool = pool.filter(e => e.category === cat);
+            return [...new Set(pool.map(e => e.major1).filter(m => m))];
+        }
+
+        function getMajor2sByMajor1(cat, major1) {
+            let pool = remaining;
+            if (cat) pool = pool.filter(e => e.category === cat);
+            if (major1) pool = pool.filter(e => e.major1 === major1);
+            return [...new Set(pool.map(e => e.major2).filter(m => m))];
+        }
+
+        function getMajor3sByMajor2(cat, major1, major2) {
+            let pool = remaining;
+            if (cat) pool = pool.filter(e => e.category === cat);
+            if (major1) pool = pool.filter(e => e.major1 === major1);
+            if (major2) pool = pool.filter(e => e.major2 === major2);
+            return [...new Set(pool.map(e => e.major3).filter(m => m))];
+        }
+        
+        function countCat(cat) {
+            return remaining.filter(e => e.category === cat).length;
+        }
+        
+        function countMajor1(cat, m1) {
+            return remaining.filter(e => e.category === cat && e.major1 === m1).length;
+        }
+        
+        function countMajor2(cat, m1, m2) {
+            return remaining.filter(e => e.category === cat && e.major1 === m1 && e.major2 === m2).length;
+        }
+        
+        function countMajor3(cat, m1, m2, m3) {
+            return remaining.filter(e => e.category === cat && e.major1 === m1 && e.major2 === m2 && e.major3 === m3).length;
+        }
+
+        function getAllMajor2sByCat(cat) {
+            let pool = remaining;
+            if (cat) pool = pool.filter(e => e.category === cat);
+            return [...new Set(pool.map(e => e.major2).filter(m => m))];
+        }
+
+        function getAllMajor3sByCat(cat) {
+            let pool = remaining;
+            if (cat) pool = pool.filter(e => e.category === cat);
+            return [...new Set(pool.map(e => e.major3).filter(m => m))];
+        }
+
+        function countMajor2ByCat(cat, m2) {
+            return remaining.filter(e => e.category === cat && e.major2 === m2).length;
+        }
+
+        function countMajor3ByCat(cat, m3) {
+            return remaining.filter(e => e.category === cat && e.major3 === m3).length;
+        }
+
+        function renderCatState() {
+            const cats = getCategories();
+            const trigger = document.getElementById('catTrigger');
+            if (!cats.length) { 
+                document.querySelector('.cat-filter').style.display = 'none'; 
+                updateRemainCount();
+                return; 
+            }
+            document.querySelector('.cat-filter').style.display = 'inline-block';
+            const onCount = selectedCategories.length;
+            trigger.textContent = '📂 ' + (onCount && onCount < cats.length ? '已选' + onCount + '类' : '类别筛选');
+            trigger.className = 'cat-trigger' + (onCount && onCount < cats.length ? ' has' : '');
+            updateRemainCount();
+        }
+
+        function renderCatDropdown() {
+            const cats = getCategories();
+            const dd = document.getElementById('catDropdown');
+            
+            let html = '<div class="cat-opt' + (hasCatSelection() ? '' : ' on') + '" onclick="toggleAllCat()">' +
+                '<div class="cb">' + (hasCatSelection() ? '' : '✓') + '</div><span class="cname">全选</span><span class="cnum">全部</span></div>' +
+                '<div class="cat-divider"></div>';
+
+            cats.forEach(cat => {
+                const catCount = countCat(cat);
+                const catOn = selectedCategories.includes(cat);
+                const major1s = getMajor1sByCat(cat);
+                const major2s = getAllMajor2sByCat(cat);
+                const major3s = getAllMajor3sByCat(cat);
+                const hasAnyLevel = major1s.length > 0 || major2s.length > 0 || major3s.length > 0;
+                
+                html += '<div class="cat-opt' + (catOn ? ' on' : '') + '" data-type="category" data-value="' + cat.replace(/"/g,'&quot;') + '" onclick="toggleCatItem(this)">' +
+                    '<div class="cb">' + (catOn ? '✓' : '') + '</div>' +
+                    '<span class="cname">' + cat + '</span>' +
+                    '<span class="cnum">' + catCount + '人</span>' +
+                    (hasAnyLevel ? '<span class="cat-expand" onclick="toggleCatExpand(event, \'' + cat.replace(/'/g,"\\'") + '\')">›</span>' : '') +
+                    '</div>';
+                
+                if (hasAnyLevel) {
+                    const safeCat = cat.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '');
+                    html += '<div class="cat-nested" id="cat-nested-' + safeCat + '">';
+                    
+                    if (major1s.length > 0) {
+                        html += '<div class="level-group">' +
+                            '<div class="level-group-header" onclick="toggleLevelExpand(event, \'' + cat.replace(/'/g,"\\'") + '\', \'major1\')">' +
+                            '<span class="level-expand" id="level-expand-' + safeCat + '-major1">▶</span>' +
+                            '<span class="level-label">一级专业</span>' +
+                            '<span class="level-count">' + major1s.length + '个</span>' +
+                            '</div>' +
+                            '<div class="level-items" id="level-items-' + safeCat + '-major1">';
+                        major1s.forEach(m1 => {
+                            const m1Count = countMajor1(cat, m1);
+                            const m1On = selectedMajor1.includes(cat + '|' + m1);
+                            html += '<div class="major1-opt' + (m1On ? ' on' : '') + '" data-type="major1-item" data-cat="' + cat.replace(/"/g,'&quot;') + '" data-value="' + m1.replace(/"/g,'&quot;') + '" onclick="toggleCatItem(this)">' +
+                                '<div class="cb">' + (m1On ? '✓' : '') + '</div>' +
+                                '<span class="cname">' + m1 + '</span>' +
+                                '<span class="cnum">' + m1Count + '人</span></div>';
+                        });
+                        html += '</div></div>';
+                    }
+                    
+                    if (major2s.length > 0) {
+                        html += '<div class="level-group">' +
+                            '<div class="level-group-header" onclick="toggleLevelExpand(event, \'' + cat.replace(/'/g,"\\'") + '\', \'major2\')">' +
+                            '<span class="level-expand" id="level-expand-' + safeCat + '-major2">▶</span>' +
+                            '<span class="level-label">二级专业</span>' +
+                            '<span class="level-count">' + major2s.length + '个</span>' +
+                            '</div>' +
+                            '<div class="level-items" id="level-items-' + safeCat + '-major2">';
+                        major2s.forEach(m2 => {
+                            const m2Count = countMajor2ByCat(cat, m2);
+                            const m2On = selectedMajor2.includes(cat + '|' + m2);
+                            html += '<div class="major2-opt' + (m2On ? ' on' : '') + '" data-type="major2-item" data-cat="' + cat.replace(/"/g,'&quot;') + '" data-value="' + m2.replace(/"/g,'&quot;') + '" onclick="toggleCatItem(this)">' +
+                                '<div class="cb">' + (m2On ? '✓' : '') + '</div>' +
+                                '<span class="cname">' + m2 + '</span>' +
+                                '<span class="cnum">' + m2Count + '人</span></div>';
+                        });
+                        html += '</div></div>';
+                    }
+                    
+                    if (major3s.length > 0) {
+                        html += '<div class="level-group">' +
+                            '<div class="level-group-header" onclick="toggleLevelExpand(event, \'' + cat.replace(/'/g,"\\'") + '\', \'major3\')">' +
+                            '<span class="level-expand" id="level-expand-' + safeCat + '-major3">▶</span>' +
+                            '<span class="level-label">三级专业</span>' +
+                            '<span class="level-count">' + major3s.length + '个</span>' +
+                            '</div>' +
+                            '<div class="level-items" id="level-items-' + safeCat + '-major3">';
+                        major3s.forEach(m3 => {
+                            const m3Count = countMajor3ByCat(cat, m3);
+                            const m3On = selectedMajor3.includes(cat + '|' + m3);
+                            html += '<div class="major3-opt' + (m3On ? ' on' : '') + '" data-type="major3-item" data-cat="' + cat.replace(/"/g,'&quot;') + '" data-value="' + m3.replace(/"/g,'&quot;') + '" onclick="toggleCatItem(this)">' +
+                                '<div class="cb">' + (m3On ? '✓' : '') + '</div>' +
+                                '<span class="cname">' + m3 + '</span>' +
+                                '<span class="cnum">' + m3Count + '人</span></div>';
+                        });
+                        html += '</div></div>';
+                    }
+                    
+                    html += '</div>';
+                }
+            });
+            
+            dd.innerHTML = html;
+        }
+
+        function toggleCatExpand(event, cat) {
+            event.stopPropagation();
+            const id = 'cat-nested-' + cat.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '');
+            const el = document.getElementById(id);
+            if (el) {
+                el.classList.toggle('show');
+                event.target.classList.toggle('expanded');
+            }
+        }
+
+        function toggleLevelExpand(event, cat, level) {
+            event.stopPropagation();
+            const safeCat = cat.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '');
+            const el = document.getElementById('level-items-' + safeCat + '-' + level);
+            const expandEl = document.getElementById('level-expand-' + safeCat + '-' + level);
+            if (el && expandEl) {
+                el.classList.toggle('show');
+                expandEl.classList.toggle('expanded');
+            }
+        }
+
+        function hasCatSelection() {
+            return selectedCategories.length > 0 || 
+                   selectedMajor1.length > 0 || 
+                   selectedMajor2.length > 0 || 
+                   selectedMajor3.length > 0;
+        }
+
+        function updateCategoryFilter() {
+            renderCatState();
+            renderCatDropdown();
+        }
+
+        function toggleCatItem(el) {
+            const type = el.dataset.type;
+            const value = el.dataset.value;
+            const cat = el.dataset.cat;
+            let selectedArray;
+            let itemValue;
+            
+            switch(type) {
+                case 'category': 
+                    selectedArray = selectedCategories;
+                    itemValue = value;
+                    break;
+                case 'major1-item': 
+                    selectedArray = selectedMajor1;
+                    itemValue = cat + '|' + value;
+                    break;
+                case 'major2-item': 
+                    selectedArray = selectedMajor2;
+                    itemValue = cat + '|' + value;
+                    break;
+                case 'major3-item': 
+                    selectedArray = selectedMajor3;
+                    itemValue = cat + '|' + value;
+                    break;
+            }
+            
+            const idx = selectedArray.indexOf(itemValue);
+            if (idx >= 0) selectedArray.splice(idx, 1);
+            else selectedArray.push(itemValue);
+            
+            el.classList.toggle('on');
+            el.querySelector('.cb').textContent = el.classList.contains('on') ? '✓' : '';
+            document.querySelector('#catDropdown .cat-opt:first-child').classList.remove('on');
+            document.querySelector('#catDropdown .cat-opt:first-child .cb').textContent = '';
+            
+            renderCatState();
+            const pool = getFilteredPool();
+            document.getElementById('drawCount').max = pool.length;
+        }
+
+        function toggleAllCat() {
+            const cats = getCategories();
+            const allSelected = hasCatSelection();
+            
+            if (allSelected) {
+                selectedCategories = [];
+                selectedMajor1 = [];
+                selectedMajor2 = [];
+                selectedMajor3 = [];
+            } else {
+                selectedCategories = [...cats];
+                selectedMajor1 = [];
+                selectedMajor2 = [];
+                selectedMajor3 = [];
+                cats.forEach(cat => {
+                    getMajor1sByCat(cat).forEach(m1 => {
+                        selectedMajor1.push(cat + '|' + m1);
+                    });
+                    getAllMajor2sByCat(cat).forEach(m2 => {
+                        selectedMajor2.push(cat + '|' + m2);
+                    });
+                    getAllMajor3sByCat(cat).forEach(m3 => {
+                        selectedMajor3.push(cat + '|' + m3);
+                    });
+                });
+            }
+            
+            document.querySelectorAll('#catDropdown .cat-opt, #catDropdown .major1-opt, #catDropdown .major2-opt, #catDropdown .major3-opt').forEach(el => {
+                el.classList.toggle('on', !allSelected);
+                el.querySelector('.cb').textContent = !allSelected ? '✓' : '';
+            });
+            
+            renderCatState();
+            const pool = getFilteredPool();
+            document.getElementById('drawCount').max = pool.length;
+        }
+
+        function positionDropdown(dd, trigger) {
+            const trigRect = trigger.getBoundingClientRect();
+            const spaceBelow = window.innerHeight - trigRect.bottom - 8;
+            const spaceAbove = trigRect.top - 8;
+            const preferBelow = spaceBelow >= spaceAbove;
+            const maxH = Math.min(420, Math.max(150, Math.floor(preferBelow ? spaceBelow : spaceAbove)));
+            dd.style.maxHeight = maxH + 'px';
+            if (preferBelow) {
+                dd.style.top = trigRect.bottom + 'px';
+                dd.style.bottom = 'auto';
+            } else {
+                dd.style.bottom = (window.innerHeight - trigRect.top) + 'px';
+                dd.style.top = 'auto';
+            }
+            dd.style.left = Math.max(4, trigRect.left) + 'px';
+            requestAnimationFrame(() => {
+                const r = dd.getBoundingClientRect();
+                if (r.right > window.innerWidth - 4) {
+                    dd.style.left = (window.innerWidth - r.width - 4) + 'px';
+                }
+                if (parseInt(dd.style.left) < 4) dd.style.left = '4px';
+            });
+        }
+
+        function toggleCatDropdown() {
+            const dd = document.getElementById('catDropdown');
+            const isShow = dd.classList.contains('show');
+            document.getElementById('regionDropdown').classList.remove('show');
+            if (!isShow) {
+                renderCatDropdown();
+                positionDropdown(dd, document.getElementById('catTrigger'));
+            }
+            dd.classList.toggle('show');
+        }
+
+        function renderRegionState() {
+            const regions = getRegions();
+            const trigger = document.getElementById('regionTrigger');
+            if (!regions.length) { 
+                document.querySelector('.region-filter').style.display = 'none'; 
+                updateRemainCount();
+                return; 
+            }
+            document.querySelector('.region-filter').style.display = 'inline-block';
+            const onCount = selectedRegions.length;
+            trigger.textContent = '📍 ' + (onCount && onCount < regions.length ? '已选' + onCount + '地' : '地区筛选');
+            trigger.className = 'region-trigger' + (onCount && onCount < regions.length ? ' has' : '');
+            updateRemainCount();
+        }
+
+        function renderRegionDropdown() {
+            const regions = getRegions();
+            const dd = document.getElementById('regionDropdown');
+            const allOn = !selectedRegions.length || selectedRegions.length === regions.length;
+            dd.innerHTML =
+                '<div class="region-opt' + (allOn ? ' on' : '') + '" onclick="toggleAllRegion()">' +
+                '<div class="cb">' + (allOn ? '✓' : '') + '</div><span class="cname">全选</span><span class="cnum">' + regions.length + '地</span></div>' +
+                '<div class="region-divider"></div>' +
+                regions.map(r => {
+                    const count = remaining.filter(e => e.region === r).length;
+                    const on = selectedRegions.includes(r);
+                    return '<div class="region-opt' + (on ? ' on' : '') + '" data-region="' + r.replace(/"/g,'&quot;') + '" onclick="toggleRegion(this)">' +
+                        '<div class="cb">' + (on ? '✓' : '') + '</div>' +
+                        '<span class="cname">' + r + '</span><span class="cnum">' + count + '人</span></div>';
+                }).join('');
+        }
+
+        function updateRegionFilter() {
+            renderRegionState();
+            renderRegionDropdown();
+        }
+
+        function toggleRegion(el) {
+            const region = el.dataset.region;
+            const idx = selectedRegions.indexOf(region);
+            if (idx >= 0) selectedRegions.splice(idx, 1);
+            else selectedRegions.push(region);
+            el.classList.toggle('on');
+            el.querySelector('.cb').textContent = el.classList.contains('on') ? '✓' : '';
+            document.querySelector('#regionDropdown .region-opt:first-child').classList.remove('on');
+            document.querySelector('#regionDropdown .region-opt:first-child .cb').textContent = '';
+            renderRegionState();
+            const pool = getFilteredPool();
+            document.getElementById('drawCount').max = pool.length;
+        }
+
+        function toggleAllRegion() {
+            const regions = getRegions();
+            const allOn = !selectedRegions.length || selectedRegions.length === regions.length;
+            selectedRegions = allOn ? [] : [...regions];
+            document.querySelectorAll('#regionDropdown .region-opt').forEach(el => {
+                el.classList.toggle('on', !allOn);
+                el.querySelector('.cb').textContent = !allOn ? '✓' : '';
+            });
+            renderRegionState();
+            const pool = getFilteredPool();
+            document.getElementById('drawCount').max = pool.length;
+        }
+
+        function toggleRegionDropdown() {
+            const dd = document.getElementById('regionDropdown');
+            const isShow = dd.classList.contains('show');
+            document.getElementById('catDropdown').classList.remove('show');
+            if (!isShow) {
+                renderRegionDropdown();
+                positionDropdown(dd, document.getElementById('regionTrigger'));
+            }
+            dd.classList.toggle('show');
+        }
+
+        document.addEventListener('click', function(e) {
+            const catDd = document.getElementById('catDropdown');
+            const regionDd = document.getElementById('regionDropdown');
+            
+            if (catDd.classList.contains('show') && !e.target.closest('.cat-filter')) {
+                catDd.classList.remove('show');
+            }
+            if (regionDd.classList.contains('show') && !e.target.closest('.region-filter')) {
+                regionDd.classList.remove('show');
+            }
+        });
+
+        function getFilteredPool() {
+            let pool = [...remaining];
+            
+            if (selectedRegions.length > 0) {
+                pool = pool.filter(e => selectedRegions.includes(e.region));
+            }
+            
+            const hasCatFilter = selectedCategories.length > 0 || 
+                               selectedMajor1.length > 0 || 
+                               selectedMajor2.length > 0 || 
+                               selectedMajor3.length > 0;
+            
+            if (hasCatFilter) {
+                pool = pool.filter(e => {
+                    if (selectedCategories.length > 0 && !selectedCategories.includes(e.category)) {
+                        return false;
+                    }
+                    
+                    if (selectedMajor1.length > 0) {
+                        const key = e.category + '|' + (e.major1 || '');
+                        if (!selectedMajor1.includes(key)) return false;
+                    }
+                    
+                    if (selectedMajor2.length > 0) {
+                        const key = e.category + '|' + (e.major2 || '');
+                        if (!selectedMajor2.includes(key)) return false;
+                    }
+                    
+                    if (selectedMajor3.length > 0) {
+                        const key = e.category + '|' + (e.major3 || '');
+                        if (!selectedMajor3.includes(key)) return false;
+                    }
+                    
+                    return true;
+                });
+            }
+            
+            return pool;
+        }
+
+        function updateRemainCount() {
+            const pool = getFilteredPool();
+            let extra = '';
+            const filters = [];
+            if (selectedCategories.length) filters.push(selectedCategories.length + '个类别');
+            if (selectedRegions.length) filters.push(selectedRegions.length + '个地区');
+            const majorCount = selectedMajor1.length + selectedMajor2.length + selectedMajor3.length;
+            if (majorCount) filters.push(majorCount + '个专业');
+            if (filters.length > 0) extra = '（已筛选' + filters.join('、') + '，可抽' + pool.length + '人）';
+            document.getElementById('drawRemain').textContent = '剩余 ' + remaining.length + ' 人 ' + extra;
+        }
+
+        function showPreview() {
+            const wrap = document.getElementById('uploadPreview');
+            wrap.classList.add('show');
+            document.getElementById('previewCount').textContent = '共 ' + experts.length + ' 人';
+            let html = '<table><thead><tr>';
+            headers.forEach(h => { html += '<th>' + h + '</th>'; });
+            html += '</tr></thead><tbody>';
+            experts.slice(0, 10).forEach((e, i) => {
+                html += '<tr><td>' + (i+1) + '</td>';
+                for (let j = 1; j < headers.length; j++) {
+                    const fk = fieldKey(headers[j]);
+                    html += '<td>' + (fk && e[fk] ? e[fk] : '') + '</td>';
+                }
+                html += '</tr>';
+            });
+            if (experts.length > 10) html += '<tr><td colspan="' + headers.length + '" style="text-align:center;color:#999;">...共 ' + experts.length + ' 人，仅展示前10人</td></tr>';
+            html += '</tbody></table>';
+            document.getElementById('previewTable').innerHTML = html;
+        }
+
+        function goToPage2() {
+            if (!experts.length) { toast('请先上传名单', 'error'); return; }
+            document.getElementById('page1').classList.remove('active');
+            document.getElementById('page2').classList.add('active');
+            selectedCategories = [];
+            selectedRegions = [];
+            selectedMajor1 = [];
+            selectedMajor2 = [];
+            selectedMajor3 = [];
+            renderFullList();
+            updateCategoryFilter();
+            updateRegionFilter();
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('exportBtn2').disabled = true;
+            document.getElementById('totalCountLabel').textContent = '(共 ' + experts.length + ' 人)';
+        }
+
+        function goToPage1() {
+            document.getElementById('page2').classList.remove('active');
+            document.getElementById('page1').classList.add('active');
+        }
+
+        function resetUpload() {
+            experts = []; remaining = []; selected = []; headers = [];
+            selectedCategories = []; selectedRegions = [];
+            selectedMajor1 = []; selectedMajor2 = []; selectedMajor3 = [];
+            document.getElementById('uploadPreview').classList.remove('show');
+            document.getElementById('startBtn').disabled = true;
+        }
+
+        function renderFullList() {
+            const wrap = document.getElementById('fullListWrap');
+            if (!experts.length) { wrap.innerHTML = '<div class="empty-tip">暂无名单</div>'; return; }
+            let html = '<table class="result-table"><thead><tr>';
+            headers.forEach(h => { html += '<th>' + h + '</th>'; });
+            html += '<th>状态</th></tr></thead><tbody>';
+            experts.forEach((e, i) => {
+                const picked = selected.some(s => s.name === e.name && s.phone === e.phone);
+                html += '<tr class="' + (picked ? 'picked' : '') + '"><td>' + (i+1) + '</td>';
+                for (let j = 1; j < headers.length; j++) {
+                    const fk = fieldKey(headers[j]);
+                    html += '<td>' + (fk && e[fk] ? e[fk] : '') + '</td>';
+                }
+                html += '<td>' + (picked ? '<span class="tag-green">已抽取</span>' : '<span class="tag-blue">未抽取</span>') + '</td></tr>';
+            });
+            html += '</tbody></table>';
+            wrap.innerHTML = html;
+        }
+
+        function renderResult() {
+            const el = document.getElementById('resultList');
+            if (!selected.length) { el.innerHTML = '<div class="empty-tip">暂无抽取结果</div>'; return; }
+            el.innerHTML = selected.map((e, i) =>
+                '<div class="result-item"><div class="idx">' + (i+1) + '</div>' +
+                '<div class="info"><div class="name">' + e.name + '</div>' +
+                '<div class="detail">' +
+                [e.gender, e.category, e.major1, e.major2, e.major3, e.region, e.status]
+                    .filter(v => v).join(' · ') +
+                (e.phone ? ' · ' + e.phone : '') + '</div></div></div>'
+            ).join('');
+        }
+
+        function startDraw() {
+            if (!experts.length) { toast('请先上传名单', 'error'); return; }
+            if (!remaining.length) { toast('名单已抽空，请重置', 'error'); return; }
+            if (isRunning) return;
+
+            const pool = getFilteredPool();
+            if (!pool.length) { toast('当前筛选条件下无人可抽', 'error'); return; }
+
+            const n = parseInt(document.getElementById('drawCount').value) || 1;
+            const target = Math.min(n, pool.length);
+            if (target < 1) return;
+
+            isRunning = true;
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('exportBtn2').disabled = true;
+            const st = document.getElementById('drawStatus');
+            const anim = document.getElementById('drawAnim');
+            st.style.display = 'none';
+            anim.style.display = 'flex';
+            anim.className = 'draw-anim';
+
+            const pick = [];
+            const drawPool = [...pool];
+            let animCount = 0;
+            const totalLoops = 18 + Math.floor(Math.random() * 10);
+
+            const iv = setInterval(() => {
+                animCount++;
+                const idx = Math.floor(Math.random() * drawPool.length);
+                const person = experts[drawPool[idx]];
+                anim.textContent = person.name;
+                if (animCount >= totalLoops) {
+                    clearInterval(iv);
+                    finishDraw();
+                }
+            }, 60);
+
+            function finishDraw() {
+                for (let i = 0; i < target; i++) {
+                    if (!drawPool.length) break;
+                    const idx = Math.floor(Math.random() * drawPool.length);
+                    pick.push(drawPool.splice(idx, 1)[0]);
+                }
+                pick.forEach(p => {
+                    const ri = remaining.findIndex(r => r.name === p.name && r.phone === p.phone);
+                    if (ri >= 0) remaining.splice(ri, 1);
+                });
+                selected.push(...pick);
+
+                isRunning = false;
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('stopBtn').disabled = true;
+                document.getElementById('exportBtn2').disabled = false;
+                anim.style.display = 'none';
+                st.style.display = 'flex';
+                st.textContent = '✓ ' + pick.map(p => p.name).join('、');
+                st.className = 'draw-status idle';
+
+                updateCategoryFilter();
+                updateRegionFilter();
+                renderFullList();
+                renderResult();
+                toast('成功抽取 ' + pick.length + ' 人！', 'success');
+
+                if (!remaining.length) document.getElementById('startBtn').disabled = true;
+            }
+
+            window._stopDraw = function() {
+                clearInterval(iv);
+                finishDraw();
+            };
+        }
+
+        function stopDraw() {
+            if (!isRunning) return;
+            if (typeof window._stopDraw === 'function') {
+                window._stopDraw();
+            }
+        }
+
+        function resetResult() {
+            if (isRunning) return;
+            remaining = [...experts];
+            selected = [];
+            selectedCategories = [];
+            selectedRegions = [];
+            selectedMajor1 = [];
+            selectedMajor2 = [];
+            selectedMajor3 = [];
+            renderFullList();
+            renderResult();
+            updateCategoryFilter();
+            updateRegionFilter();
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('exportBtn2').disabled = true;
+            document.getElementById('drawStatus').textContent = '准备就绪';
+            document.getElementById('drawStatus').className = 'draw-status idle';
+            toast('已重置', 'info');
+        }
+
+        async function downloadTemplate() {
+            if (typeof ExcelJS === 'undefined') { toast('加载库失败，请刷新重试', 'error'); return; }
+            try {
+                const wb = new ExcelJS.Workbook();
+                const ws = wb.addWorksheet('名单模板');
+                ws.columns = [{width:6},{width:10},{width:6},{width:15},{width:8},{width:12},{width:12},{width:12},{width:10},{width:10}];
+                ws.mergeCells(1, 1, 2, 10);
+                const title = ws.getCell('A1');
+                title.value = '输入项目名称';
+                title.font = { size: 14, color: { argb: 'FF999999' } };
+                title.alignment = { horizontal: 'center', vertical: 'middle' };
+                ws.getRow(1).height = 24;
+                ws.getRow(2).height = 24;
+                const hdr = ['序号','姓名','性别','手机','类别','一级专业','二级专业','三级专业','地区','状态'];
+                const hr = ws.getRow(3);
+                hr.values = hdr;
+                hr.eachCell(c => { c.font = { bold: true }; c.alignment = { horizontal: 'center', vertical: 'middle' }; });
+                const samples = [
+                    [1,'张三','男','13800000001','工程类','建筑工程','结构工程','桥梁工程','北京','待抽取'],
+                    [2,'李四','女','13800000002','服务类','市政工程','给排水','污水处理','上海','待抽取'],
+                    [3,'王五','男','13800000003','货物类','建筑工程','暖通工程','空调系统','广州','待抽取']
+                ];
+                samples.forEach((row, i) => {
+                    const r = ws.getRow(i + 4);
+                    r.values = row;
+                    r.eachCell(c => { c.alignment = { vertical: 'middle' }; });
+                });
+                const buf = await wb.xlsx.writeBuffer();
+                const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+                const u = URL.createObjectURL(blob), a = document.createElement('a');
+                a.href = u; a.download = '名单模板.xlsx';
+                document.body.appendChild(a); a.click();
+                document.body.removeChild(a); setTimeout(() => URL.revokeObjectURL(u), 1000);
+                toast('模板已下载', 'success');
+            } catch(e) { toast('下载失败：'+e.message, 'error'); }
+        }
+
+        function showExportModal() {
+            if (!selected.length) { toast('请先抽取至少1位专家', 'error'); return; }
+            const top = document.getElementById('projectName').value.trim();
+            document.getElementById('exportProjectName').value = top;
+            document.getElementById('exportModal').classList.remove('hidden');
+        }
+        function closeModal() { document.getElementById('exportModal').classList.add('hidden'); }
+
+        async function exportWord() {
+            const pn = document.getElementById('exportProjectName').value.trim() || '抽取报告';
+            const dn = document.getElementById('drawerName').value.trim() || '(未填写)';
+            const now = new Date();
+            const ts = now.getFullYear()+'年'+(now.getMonth()+1)+'月'+now.getDate()+'日';
+
+            if (typeof ExcelJS === 'undefined') { toast('加载库失败，请刷新重试', 'error'); return; }
+            try {
+                const wb = new ExcelJS.Workbook();
+                const ws = wb.addWorksheet('抽取结果');
+                const colHeaders = headers.length ? headers : ['序号','姓名','性别','手机','类别','一级专业','二级专业','三级专业','地区','状态'];
+                const colCount = colHeaders.length;
+
+                ws.columns = Array.from({length: colCount}, (_, i) => ({width: i < 2 ? 16 : 12}));
+
+                ws.mergeCells(1, 1, 2, colCount);
+                const title = ws.getCell('A1');
+                title.value = pn + '抽取结果报告单';
+                title.font = { size: 16, bold: true };
+                title.alignment = { horizontal: 'center', vertical: 'middle' };
+                ws.getRow(1).height = 28;
+                ws.getRow(2).height = 28;
+
+                const hr = ws.getRow(3);
+                hr.values = colHeaders;
+                hr.eachCell(c => { c.font = { bold: true }; c.alignment = { horizontal: 'center', vertical: 'middle' }; });
+
+                const catCol = colHeaders.findIndex(h => /类别/.test(h));
+
+                selected.forEach((e, i) => {
+                    const r = ws.getRow(i + 4);
+                    const vals = [i + 1];
+                    for (let j = 1; j < colHeaders.length; j++) {
+                        const fk = fieldKey(colHeaders[j]);
+                        if (fk === 'status') { vals.push('已抽取'); continue; }
+                        vals.push(fk && e[fk] ? e[fk] : '');
+                    }
+                    r.values = vals;
+                    r.eachCell(c => { c.alignment = { vertical: 'middle' }; });
+                });
+
+                if (catCol >= 0) {
+                    const xlCol = catCol + 1;
+                    let start = 4;
+                    for (let i = 1; i < selected.length; i++) {
+                        if (selected[i].category !== selected[i - 1].category) {
+                            if (i - 1 > start - 4) ws.mergeCells(start, xlCol, i + 3, xlCol);
+                            start = i + 4;
+                        }
+                    }
+                    if (selected.length - 1 > start - 4) ws.mergeCells(start, xlCol, selected.length + 3, xlCol);
+                }
+
+                const sigStart = selected.length + 5;
+                const rows = [
+                    ['抽取人签字：_______________'],
+                    ['监督人签字：_______________'],
+                    ['抽取时间：' + ts]
+                ];
+                for (let i = 0; i < 3; i++) {
+                    const r = ws.getRow(sigStart + i);
+                    r.getCell(1).value = rows[i][0];
+                    r.eachCell(c => { c.font = { size: 12 }; c.alignment = { vertical: 'middle' }; });
+                    r.height = 30;
+                }
+
+                const buf = await wb.xlsx.writeBuffer();
+                const blob = new Blob([buf], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+                const u = URL.createObjectURL(blob), a = document.createElement('a');
+                a.href = u; a.download = pn+'_抽取结果.xlsx';
+                document.body.appendChild(a); a.click();
+                document.body.removeChild(a); setTimeout(() => URL.revokeObjectURL(u), 1000);
+                closeModal();
+                toast('报告已导出！', 'success');
+            } catch(e) { toast('导出失败：'+e.message, 'error'); }
+        }
+    </script>
+</body>
+</html>
